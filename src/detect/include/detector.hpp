@@ -111,22 +111,19 @@ namespace detect{
             cv::multiply(color,other_color,color);
             
             cv::filter2D(color,color_around,-1,pooling_kernal,cv::Point(3,3),0,cv::BORDER_CONSTANT);
-            cv::threshold(color,color_contour,1,1,cv::THRESH_BINARY_INV);
             cv::threshold(color_around,color_around,1,1,cv::THRESH_BINARY);
-            cv::multiply(channels[1],color_contour,channels[1]);
             cv::multiply(channels[1],color_around,channels[1]);
             cv::threshold(channels[1],channels[1],BINARY_THRESHOLD,255,cv::THRESH_BINARY);
-
+            #define src_gray channels[1]
             #endif
             
-            cv::findContours(channels[1], contours, hierarchy, cv::RETR_EXTERNAL,cv::CHAIN_APPROX_NONE);
+            cv::findContours(src_gray, contours, hierarchy, cv::RETR_EXTERNAL,cv::CHAIN_APPROX_NONE);
             for( size_t i = 0; i< contours.size(); i++){
                 r_rect = cv::minAreaRect(contours[i]);
                 light = std::make_shared<detect::Light>(r_rect);
                 if (light->is_light(&frame)) {
                     lights[light_count++]=light;
                     #ifdef DEBUG
-                    light->draw(&frame);
                     if (light_count>=LIGHT_ARRAY_LENGTH-1) std::cout<<"overflow!\n";
                     #endif
                 }
@@ -140,11 +137,10 @@ namespace detect{
                     if (lights[j]->center.x > maxx) break;
                     if (abssub(lights[i]->angle, lights[j]->angle)>LIGHT_ANGLE_ERR || contain_lights(i,j,lights)) continue;
                     armor = std::make_shared<detect::Armor>(lights[i],lights[j]);
-                    armor->get_boarders();
-                    armor->draw(&frame);
                     if (armor->is_armor()) {
-                        
+                        armor->get_boarders();
                         if (armor->get_number(frame,transform,decimal)){
+                            armor->draw(&frame);
                             armors[armor_count++]=armor;
                             #if IDENTIFY_METHOD == MSE
                             #endif
