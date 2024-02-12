@@ -67,9 +67,16 @@ namespace detect{
         cv::Mat_<double> decimal[5];
         int light_count,armor_count;
         std::vector<cv::Vec4i> hierarchy;
+
+        #if PREPROCESSOR == CHANNELSUB
+        std::vector<cv::Mat> channels;
+        cv::Mat color,other_color,color_around,
+            color_contour;
+        #elif PREPROCESSOR == BINARY_THRESHOLDING
         cv::Mat src_gray;
+        #endif
 		Detector(){
-            #if METHOD == MSE
+            #if IDENTIFY_METHOD == MSE
             for (int i=0;i<5;i++){
                 cv::Mat temp=cv::imread(DECIMAL_PATH(i+1),cv::IMREAD_GRAYSCALE);
                 cv::Size sz=temp.size();
@@ -90,10 +97,29 @@ namespace detect{
             std::shared_ptr<Light> light;
             std::shared_ptr<Armor> armor;
 
+            #if PREPROCESSOR == BINARY_THRESHOLDING
             cv::cvtColor(frame,src_gray,cv::COLOR_BGR2GRAY);
-            cv::threshold(src_gray,src_gray, BINARY_THRESH, 100 ,cv::THRESH_BINARY);
+            cv::threshold(src_gray,src_gray, BINARY_THRESHOLD, 100 ,cv::THRESH_BINARY);
+
+            #elif PREPROCESSOR == CHANNELSUB
             
-            cv::findContours(src_gray, contours, hierarchy, cv::RETR_EXTERNAL,cv::CHAIN_APPROX_NONE);
+            cv::split(frame, channels);
+            cv::threshold(channels[COLOR],color,COLOR_BINARY_THRESHOLD,255,cv::THRESH_BINARY);
+            cv::threshold(channels[(COLOR+1)%3],other_color,OTHER_COLOR_BINARY_THRESHOLD,1,cv::THRESH_BINARY_INV);
+            cv::multiply(color,other_color,color);
+            cv::threshold(channels[(COLOR+2)%3],other_color,OTHER_COLOR_BINARY_THRESHOLD,1,cv::THRESH_BINARY_INV);
+            cv::multiply(color,other_color,color);
+            
+            cv::filter2D(color,color_around,-1,pooling_kernal,cv::Point(3,3),0,cv::BORDER_CONSTANT);
+            cv::threshold(color,color_contour,1,1,cv::THRESH_BINARY_INV);
+            cv::threshold(color_around,color_around,1,1,cv::THRESH_BINARY);
+            cv::multiply(channels[1],color_contour,channels[1]);
+            cv::multiply(channels[1],color_around,channels[1]);
+            cv::threshold(channels[1],channels[1],BINARY_THRESHOLD,255,cv::THRESH_BINARY);
+
+            #endif
+            
+            cv::findContours(channels[1], contours, hierarchy, cv::RETR_EXTERNAL,cv::CHAIN_APPROX_NONE);
             for( size_t i = 0; i< contours.size(); i++){
                 r_rect = cv::minAreaRect(contours[i]);
                 light = std::make_shared<detect::Light>(r_rect);
@@ -114,21 +140,21 @@ namespace detect{
                     if (lights[j]->center.x > maxx) break;
                     if (abssub(lights[i]->angle, lights[j]->angle)>LIGHT_ANGLE_ERR || contain_lights(i,j,lights)) continue;
                     armor = std::make_shared<detect::Armor>(lights[i],lights[j]);
+                    armor->get_boarders();
+                    armor->draw(&frame);
                     if (armor->is_armor()) {
-                        armor->get_boarders();
-                        armor->draw(&frame);
-                        /*
+                        
                         if (armor->get_number(frame,transform,decimal)){
                             armors[armor_count++]=armor;
-                            #if METHOD == MSE
+                            #if IDENTIFY_METHOD == MSE
                             #endif
-                        }*/
+                        }
                     }
                 }
-            }/*
+            }
             message.data+=std::to_string(armor_count)+' ';
-            for (int i=0;i<armor_count;i++) armors[i]->PnP(armor_world_pos,message,rvecs,tvecs);*/
-            if (!frame.empty()) imshow("frame", frame),imshow("gray", src_gray);
+            for (int i=0;i<armor_count;i++) armors[i]->PnP(armor_world_pos,message,rvecs,tvecs);
+            if (!frame.empty()) imshow("frame", frame),imshow("color",channels[1]);
             else std::cout<<"Frame empty\n";
             cv::waitKey(10);
 		}

@@ -8,6 +8,7 @@
 #include "cfg.hpp"
 #include <vector>
 #include <geometry_msgs/msg/point.hpp>
+#include <algorithm>
 
 #ifdef DEBUG
 #include <iostream>
@@ -36,10 +37,14 @@ namespace detect{
         0.,         1256.42896, 562.49495,
         0.,         0.,         1.
     };
+    
     double distCoeffs_data[5]={0.,0.,0.,0.,0.};
-
+    double pooling_kernal_data[1600];
+    double* x=std::fill_n(pooling_kernal_data,1600,1);
+    
     cv::Mat camera_matrix(3, 3, CV_64F, camera_matrix_data);
     cv::Mat distCoeffs(1, 5, CV_64F, distCoeffs_data);
+    cv::Mat pooling_kernal(40, 40, CV_64F, pooling_kernal_data);
     class Light{
 	public:
 	    float angle,wid,hei;
@@ -56,7 +61,7 @@ namespace detect{
             rect.points(vertices);
         };
         int is_light(cv::Mat* frame){
-            if (angle<LIGHT_MIN_ANGLE || angle>(180.-LIGHT_MIN_ANGLE) || hei/wid<LIGHT_MIN_RATIO) return 0;
+            if (hei/wid<LIGHT_MIN_RATIO) return 0;
             if (!(0 <= center.x && 0 <= wid && center.x + wid <= frame->cols && 0 <= center.y && 0 <= hei && center.y + hei <= frame->rows)) return 0;
             cv::Mat roi(*frame,cv::Rect(center.x,center.y,wid,hei));
             cv::Scalar res = cv::sum(roi);
@@ -119,7 +124,7 @@ namespace detect{
             x= (vertices[0]-vertices[3])*ARMOR_NUMBER_WID_RATIO;
             vertices[0]-=x;vertices[3]+=x;
         }
-        #if METHOD == MSE
+        #if IDENTIFY_METHOD == MSE
         int get_number(cv::Mat frame,std::vector<cv::Point2f> trans,cv::Mat* digits){
             cv::Mat temp;
             cv::warpPerspective(frame, temp, cv::getPerspectiveTransform(vertices, trans), cv::Size(TRANS_WID,TRANS_HEI));

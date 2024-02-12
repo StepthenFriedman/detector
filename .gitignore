@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+*.bin
 
 *.cmake
 *.make
@@ -39,7 +40,6 @@
 *.zsh
 *.stamp
 *.dsv
-*.bin
 *.ini
 
 build/*
@@ -52,3 +52,5 @@ src/detect/log/*
 
 *.avi
 *.mp4
+
+cmd.txt
