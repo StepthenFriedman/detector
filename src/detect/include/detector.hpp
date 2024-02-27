@@ -150,7 +150,7 @@ namespace detect{
             }
             message.data+=std::to_string(armor_count)+' ';
             for (int i=0;i<armor_count;i++) armors[i]->PnP(armor_world_pos,message,rvecs,tvecs);
-            if (!frame.empty()) imshow("frame", frame),imshow("color",channels[1]);
+            if (!frame.empty()) imshow("frame", frame);
             else std::cout<<"Frame empty\n";
             cv::waitKey(10);
 		}

@@ -156,18 +156,15 @@ namespace detect{
             for (int i=0;i<4;i++) printf("(%.2f %.2f) ",vertices[i].x,vertices[i].y);
             putchar('\n');
             cv::solvePnP(real_armor,vertices,camera_matrix,distCoeffs,rvecs,tvecs,false,cv::SOLVEPNP_AP3P);
-            msg.data+="{";
-            msg.data+=std::to_string(id)+": ";
+            msg.data+=std::to_string(id)+" ";
             for(int row = 0; row < rvecs.rows; ++row) {
                 double* p = rvecs.ptr<double>(row);
                 msg.data+=std::to_string(*p)+' ';
             }
-            msg.data+="|";
             for(int row = 0; row < tvecs.rows; ++row) {
                 double* p = tvecs.ptr<double>(row);
                 msg.data+=std::to_string(*p)+' ';
             }
-            msg.data+="}";
             #ifdef DEBUG
             std::cout<<msg.data<<'\n';
             #endif
